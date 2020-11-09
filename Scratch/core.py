@@ -48,10 +48,6 @@ class Performance():
 
     """
 
-    def get_data_from_buffer(self):
-        data = np.frombuffer(self.stream.read(self.chunk_size), dtype=np.int16)
-        return data
-
     def __init__(self, Synaesthete, chunk_size = 1024, form = pyaudio.paInt16,
                  channels = 2, rate = 44100, output_file = None):
         
@@ -64,7 +60,7 @@ class Performance():
         
         # Define Performance Objects
         self.Synaesthete = Synaesthete
-        self.transformer = FourierTransformer(self.chunk_size) # Classed so we can easily replace if we want
+        self.Synaesthete.set_transformer(FourierTransformer(self.chunk_size)) # Classed so we can easily replace if we want
         self.Animator = Animator(self.Synaesthete)
 
     def start_stream(self):
@@ -87,12 +83,6 @@ class Performance():
         self.stream.close()
         self.PA.terminate()
         print('Stream Closed')
-
-    def get_transformed_data(self):
-        data = self.get_data_from_buffer()
-        transform_y = self.transformer.transform(data)
-        transform_x = self.transformer.frequencies
-        return transform_x, transform_y
 
     def perform(self, printing = True):
         print('Performance Started! Woohoo!')
@@ -155,16 +145,17 @@ class Synaesthete():
         self.effects = effects
         self.data = [1, 2, 3,4,5], [1,2,3,4,5]
         self.stream = None
+        self.transformer = None
     
     def get_image(self, frame):
-        x_data, y_data = self.get_data()
+        self.update_data()
+        x_data, y_data = self.data
         self.line.set_data(x_data, y_data)    
         return self.line,
     
     def update_data(self, x_data, y_data):
-        self.data = x_data, y_data
+        self.data = self.get_transformed_data()
         
-
     def get_data(self):
         return self.data
 
@@ -172,6 +163,25 @@ class Synaesthete():
         line, = ax.plot([], [], lw=2)
         line.set_data([], [])
         self.line = line
+    
+    def set_stream(self, stream):
+        self.stream = stream
+
+    def get_stream(self):
+        return self.stream
+
+    def get_data_from_buffer(self):
+        data = np.frombuffer(self.stream.read(self.chunk_size), dtype=np.int16)
+        return data
+    
+    def set_transformer(self, transformer):
+        self.transformer = transformer
+    
+    def get_transformed_data(self):
+        data = self.get_data_from_buffer()
+        transform_y = self.transformer.transform(data)
+        transform_x = self.transformer.frequencies
+        return transform_x, transform_y
          
 
 
