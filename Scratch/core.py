@@ -18,7 +18,7 @@ from pynput import keyboard
 # 1. Print a livestream of Fourier Coefficients
 # 2. Plot a livestream of Fourier Coefficients
 
-# TODO Chunk size is pretty ugly.
+# TODO Chunk size is pretty ugly?
 # TODO Deprecate Animator class? Only called by Performance, seems like overkill
 
 class FourierTransformer():
@@ -61,7 +61,7 @@ class Performance():
         self.format = form
         self.channels = channels
         self.rate = rate
-        self.output_file = output_file
+        self.output_file = output_file 
         
         # Define Performance Objects
         self.Synaesthete = Synaesthete(chunk_size)
@@ -125,7 +125,7 @@ class Animator():
 
         self.Synaesthete.anim_init(ax)
 
-        ani = animation.FuncAnimation(fig, self.Synaesthete.get_image,
+        ani = animation.FuncAnimation(fig, self.Synaesthete.master,
                                         interval=self.interval, blit=False,
                                         frames = 200)
 
@@ -140,36 +140,40 @@ class Animator():
         return
 
 class Synaesthete():
-    """Where the Magic Happens
+    """Where the Magic Happens.
+
+    Ultimately the plan is that there should be a class Effects, which is SubClassed.
+
+    The Effects you want to use are defined at Instantiation 
     
     """
     def __init__(self, chunk_size, transform_type = 'fourier', effects = []):      
-        self.effects = effects
-        self.data = [1, 2, 3,4,5], [1,2,3,4,5]
+        self.data = [], []
         self.stream = None
         self.transformer = None
         self.chunk_size = chunk_size
+        
+        self.active_effect = effects[0]
+        self.effects_generator = (effects[i] for i in range(len(effects))) # check if this works?
+        self.effects = effects
+     
     
-    def get_image(self, frame):
+    def master(self, frame):
+        # TODO make this elegantly handle switching, will need to write two Effects classes to switch between.
+        # TODO incorporate button pressing
         self.update_data()
         x_data, y_data = self.get_data()
-        self.line.set_data(x_data, y_data)
-        self.ax.set_ylim(0, max(y_data))
+        artists = self.active_effect.get_image(x_data, y_data)
         return self.line,
-    
+
+    def next_active_effect(self):
+        return next(self.effects_generator) # check if this works?
+
     def update_data(self):
         self.data = self.get_transformed_data()
         
     def get_data(self):
         return self.data
-
-    def anim_init(self, ax):
-        freqs = self.transformer.frequencies
-        ax.set_xlim(min(freqs), max(freqs))
-        line, = ax.plot([], [], lw=2, drawstyle = 'steps-post')
-        line.set_data([], [])
-        self.line = line
-        self.ax = ax
     
     def set_stream(self, stream):
         self.stream = stream
@@ -178,7 +182,7 @@ class Synaesthete():
         return self.stream
 
     def get_data_from_buffer(self):
-        data = np.frombuffer(self.stream.read(self.chunk_size), dtype=np.int16)
+        data = np.frombuffer(self.stream.read(self.chunk_size, exception_on_overflow=False), dtype=np.int16)
         return data
     
     def set_transformer(self, transformer):
@@ -189,7 +193,28 @@ class Synaesthete():
         transform_y = self.transformer.transform(data)
         transform_x = self.transformer.frequencies
         return transform_x, transform_y
-         
+    
+
+class BasicSpectrogram():
+    """First Example of an Effects class.
+
+    The idea here is that they should always take in a common set of arguments, and must have two methods.
+
+    get_image -> returns an iterable of artists that can be used by FuncAnimation
+    init_image -> initialises the image? Not 100% sure if needed but will need to check if we can elegantly
+                    handle canvas clearing without it
+    """
+
+
+    def __init__(cmaps, x_lim = None, y_lim = None):
+        self.cmaps = cmaps
+        self.x_lim = None
+        self.y_lim = None
+
+    def get_image():
+        self.line.set_data(x_data, y_data)
+        self.ax.set_ylim(0, max(y_data))
+        return line,
 
 
 
