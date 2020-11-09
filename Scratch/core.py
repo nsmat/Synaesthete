@@ -51,7 +51,7 @@ class Performance():
 
     """
 
-    def __init__(self, chunk_size = 1024, form = pyaudio.paInt16,
+    def __init__(self, chunk_size = 2048, form = pyaudio.paInt16,
                  channels = 2, rate = 44100, output_file = None):
         
         # TODO Synaesthete should be passed as an argument. Pointless until it is more configurable.
@@ -104,7 +104,6 @@ class Animator():
     def __init__(self, Synaesthete):
         self.interval=1. #milliseconds
         self.starttime = time.time()
-        self.timelength = 10 # seconds
         self.Synaesthete = Synaesthete
 
     def create_animation(self, background_colour = 'black'):
@@ -114,6 +113,8 @@ class Animator():
         window.configure(background=background_colour)
 
         fig, ax = plt.subplots()
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
 
         print('Opening canvas')
 
@@ -125,7 +126,8 @@ class Animator():
         self.Synaesthete.anim_init(ax)
 
         ani = animation.FuncAnimation(fig, self.Synaesthete.get_image,
-                                        interval=self.interval, blit=False)
+                                        interval=self.interval, blit=False,
+                                        frames = 200)
 
         tk.mainloop()
 
@@ -151,7 +153,8 @@ class Synaesthete():
     def get_image(self, frame):
         self.update_data()
         x_data, y_data = self.get_data()
-        self.line.set_data(x_data, y_data)    
+        self.line.set_data(x_data, y_data)
+        self.ax.set_ylim(0, max(y_data))
         return self.line,
     
     def update_data(self):
@@ -161,9 +164,12 @@ class Synaesthete():
         return self.data
 
     def anim_init(self, ax):
-        line, = ax.plot([], [], lw=2)
+        freqs = self.transformer.frequencies
+        ax.set_xlim(min(freqs), max(freqs))
+        line, = ax.plot([], [], lw=2, drawstyle = 'steps-post')
         line.set_data([], [])
         self.line = line
+        self.ax = ax
     
     def set_stream(self, stream):
         self.stream = stream
