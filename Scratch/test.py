@@ -1,8 +1,7 @@
 from core import *
 
-def run(): 
-    Syn = Synaesthete() # For now synaesthete does nothing
-    P = Performance(Syn)
+def run():
+    P = Performance()
     P.perform()
 
 if __name__ == "__main__":

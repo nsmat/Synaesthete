@@ -18,6 +18,9 @@ from pynput import keyboard
 # 1. Print a livestream of Fourier Coefficients
 # 2. Plot a livestream of Fourier Coefficients
 
+# TODO Chunk size is pretty ugly.
+# TODO Deprecate Animator class? Only called by Performance, seems like overkill
+
 class FourierTransformer():
     """ Performs Fourier Transforms"""
     # TODO Check the calculations Zac did.
@@ -48,9 +51,11 @@ class Performance():
 
     """
 
-    def __init__(self, Synaesthete, chunk_size = 1024, form = pyaudio.paInt16,
+    def __init__(self, chunk_size = 1024, form = pyaudio.paInt16,
                  channels = 2, rate = 44100, output_file = None):
         
+        # TODO Synaesthete should be passed as an argument. Pointless until it is more configurable.
+
         # Define Parameters
         self.chunk_size = chunk_size
         self.format = form
@@ -59,7 +64,7 @@ class Performance():
         self.output_file = output_file
         
         # Define Performance Objects
-        self.Synaesthete = Synaesthete
+        self.Synaesthete = Synaesthete(chunk_size)
         self.Synaesthete.set_transformer(FourierTransformer(self.chunk_size)) # Classed so we can easily replace if we want
         self.Animator = Animator(self.Synaesthete)
 
@@ -74,7 +79,7 @@ class Performance():
 
         self.stream = stream
         self.PA = PA
-        self.Synasthete.set_stream(stream)
+        self.Synaesthete.set_stream(stream)
 
         print("Stream Started")
 
@@ -89,14 +94,7 @@ class Performance():
         self.start_stream()
 
         # Start Animation
-        self.Animator.create_tk_window()
-
-        while True:
-            transform_x, transform_y = self.get_transformed_data()
-            self.Synaesthete.update_data(transform_x, transform_y)
-            if printing:
-                print(transform_x)
-                print(transform_y)
+        self.Animator.create_animation()
         self.close_stream()
         print('Performance Finished :((((')
 
@@ -109,7 +107,7 @@ class Animator():
         self.timelength = 10 # seconds
         self.Synaesthete = Synaesthete
 
-    def create_tk_window(self, background_colour = 'black'):
+    def create_animation(self, background_colour = 'black'):
         """ Create a tk window for plotting in"""
 
         window = tk.Tk()
@@ -140,20 +138,23 @@ class Animator():
         return
 
 class Synaesthete():
-    """Where the Magic Happens"""
-    def __init__(self, transform_type = 'fourier', effects = []):      
+    """Where the Magic Happens
+    
+    """
+    def __init__(self, chunk_size, transform_type = 'fourier', effects = []):      
         self.effects = effects
         self.data = [1, 2, 3,4,5], [1,2,3,4,5]
         self.stream = None
         self.transformer = None
+        self.chunk_size = chunk_size
     
     def get_image(self, frame):
         self.update_data()
-        x_data, y_data = self.data
+        x_data, y_data = self.get_data()
         self.line.set_data(x_data, y_data)    
         return self.line,
     
-    def update_data(self, x_data, y_data):
+    def update_data(self):
         self.data = self.get_transformed_data()
         
     def get_data(self):
