@@ -25,7 +25,7 @@ class BasicSpectrogram():
 
     def get_image(self, ax, x_data, y_data):
 
-        self.init_func()
+        self.init_func(ax)
 
         self.line.set_data(x_data, y_data)
 

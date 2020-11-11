@@ -33,7 +33,7 @@ class Performance():
     """
 
     def __init__(self, effects, chunk_size = 2048, form = pyaudio.paInt16,
-                 channels = 2, rate = 44100, output_file = None):
+                 channels = 2, rate = 44100, output_file = None, blit = False):
         
         # TODO Synaesthete should be passed as an argument. Pointless until it is more configurable.
 
@@ -45,6 +45,7 @@ class Performance():
         self.output_file = output_file 
         self.interval=1. #milliseconds
         self.starttime = time.time()
+        self.blit = blit
         
         # Define Performance Objects
         self.Synaesthete = Synaesthete(chunk_size, effects=effects)
@@ -90,7 +91,7 @@ class Performance():
         print('Animation')
 
         ani = animation.FuncAnimation(fig, self.Synaesthete.master,
-                                        interval=self.interval, blit=False,
+                                        interval=self.interval, blit=self.blit,
                                         frames = 200)
 
         tk.mainloop()
