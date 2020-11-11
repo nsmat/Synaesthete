@@ -1,13 +1,11 @@
 from core import Performance
-from effects.spectrogram import BasicSpectrogram
+from effects.spectrogram import BasicSpectrogram, RainbowSpectrogram
 
 def run():
-    spectrogram = BasicSpectrogram(x_lim = 1000)
-    spectrogram_2 = BasicSpectrogram(x_lim=1000, line_args = {'c': 'red'})
-
-    spectrogram_3 = BasicSpectrogram(x_lim=1000, y_lim = 3000, line_args = {'c': 'orange'})
+    spectrogram = BasicSpectrogram(x_lim=1000, y_lim = 1000, line_args = {'c': 'orange'})
+    rainbow = RainbowSpectrogram(n_lines=20)
     
-    effects = [spectrogram, spectrogram_2, spectrogram_3]
+    effects = [rainbow]
     P = Performance(effects)
     P.perform()
 

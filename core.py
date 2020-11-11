@@ -71,11 +71,12 @@ class Performance():
         self.PA.terminate()
         print('Stream Closed')
 
-    def create_animation(self, background_colour = 'black'):
-        """ Create a tk window for plotting in"""
+    def create_animation(self, window_args = {}):
+        #TODO Make blitting work for improved performance
+        """ Handles instantiation and running of the animation """
 
         window = tk.Tk()
-        window.configure(background=background_colour)
+        window.configure(**window_args) #currently does nothing - remove?
 
         fig, ax = plt.subplots()
         
