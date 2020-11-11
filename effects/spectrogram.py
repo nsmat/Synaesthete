@@ -2,6 +2,8 @@ import numpy as np
 from itertools import cycle
 from matplotlib import cm
 
+# TODO create parent class. Requirements are init_func, get_image and plotting_func.
+
 class BasicSpectrogram():
     """First Example of an Effects class.
 
@@ -23,12 +25,10 @@ class BasicSpectrogram():
 
     def get_image(self, ax, x_data, y_data):
 
-        if self.init:
-            self.line, = ax.plot([], [], **self.line_args)
-            self.init = False
+        self.init_func()
+
         self.line.set_data(x_data, y_data)
 
-        
         if self.y_lim:  
             ylim = self.y_lim
         else:
@@ -37,6 +37,11 @@ class BasicSpectrogram():
         ax.set_ylim(0, ylim)
         ax.set_xlim(0, self.x_lim)
         return self.line,
+
+    def init_func(self, ax):
+        if self.init:
+            self.line, = ax.plot([], [], **self.line_args)
+            self.init = False
 
 class RainbowSpectrogram():
 
