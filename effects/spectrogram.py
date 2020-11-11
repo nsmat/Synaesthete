@@ -56,7 +56,7 @@ class RainbowSpectrogram():
     def get_image(self, ax, x_data, y_data):
         volume = y_data.sum()//100
 
-        self.init_func()
+        self.init_func(ax)
 
         for i in range(self.n_lines):
             line = self.lines[i]
@@ -67,7 +67,7 @@ class RainbowSpectrogram():
 
         return self.lines
 
-    def init_func(self):
+    def init_func(self,ax):
         if self.init:
             self.lines = []
             for i in range(self.n_lines):
