@@ -8,33 +8,14 @@ import time
 import matplotlib.animation as animation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from pynput import keyboard
+import numpy as np
+from itertools import cycle
+from helpers.transforms import FourierTransformer
 
 # High level goals
 # Performance - even if hefty preloading is required, should run pretty seamlessly.
 # Readability - ultimately everything should be classed.
 # Flexibility - you should be able to layer effects on as you go/apply multiple effects.
-
-# # #  Goals
-# 1. Print a livestream of Fourier Coefficients
-# 2. Plot a livestream of Fourier Coefficients
-
-# TODO Chunk size is pretty ugly.
-# TODO Deprecate Animator class? Only called by Performance, seems like overkill
-
-class FourierTransformer():
-    """ Performs Fourier Transforms"""
-    # TODO Check the calculations Zac did.
-
-    def __init__(self, chunk_size):
-        # TODO rename variables to be more meaningful
-        self.chunk_size = chunk_size
-        self.T = 1.0 / (12*chunk_size)
-        self.frequencies = np.linspace(0.0, 1.0/(2*self.T), int(chunk_size/2))
-
-    def transform(self, data):
-        yf = np.abs(np.fft.fft(data))
-        return  2.0/self.chunk_size *np.abs(yf[:self.chunk_size//2]) # TODO Why stop halfway??
-        
 
 class Performance():
     """Handles PyAudio inputs.
@@ -51,8 +32,8 @@ class Performance():
 
     """
 
-    def __init__(self, chunk_size = 2048, form = pyaudio.paInt16,
-                 channels = 2, rate = 44100, output_file = None):
+    def __init__(self, effects, chunk_size = 2048, form = pyaudio.paInt16,
+                 channels = 2, rate = 44100, output_file = None, blit = False):
         
         # TODO Synaesthete should be passed as an argument. Pointless until it is more configurable.
 
@@ -61,12 +42,14 @@ class Performance():
         self.format = form
         self.channels = channels
         self.rate = rate
-        self.output_file = output_file
+        self.output_file = output_file 
+        self.interval=1. #milliseconds
+        self.starttime = time.time()
+        self.blit = blit
         
         # Define Performance Objects
-        self.Synaesthete = Synaesthete(chunk_size)
+        self.Synaesthete = Synaesthete(chunk_size, effects=effects)
         self.Synaesthete.set_transformer(FourierTransformer(self.chunk_size)) # Classed so we can easily replace if we want
-        self.Animator = Animator(self.Synaesthete)
 
     def start_stream(self):
         PA = pyaudio.PyAudio() # Instantiate the PyAudio instance
@@ -89,32 +72,16 @@ class Performance():
         self.PA.terminate()
         print('Stream Closed')
 
-    def perform(self, printing = True):
-        print('Performance Started! Woohoo!')
-        self.start_stream()
-
-        # Start Animation
-        self.Animator.create_animation()
-        self.close_stream()
-        print('Performance Finished :((((')
-
-
-class Animator():
-    """Handles Animtion and Plotting Backend"""
-    def __init__(self, Synaesthete):
-        self.interval=1. #milliseconds
-        self.starttime = time.time()
-        self.Synaesthete = Synaesthete
-
-    def create_animation(self, background_colour = 'black'):
-        """ Create a tk window for plotting in"""
+    def create_animation(self, window_args = {}):
+        #TODO Make blitting work for improved performance
+        """ Handles instantiation and running of the animation """
 
         window = tk.Tk()
-        window.configure(background=background_colour)
+        window.configure(**window_args) #currently does nothing - remove?
 
         fig, ax = plt.subplots()
-        ax.set_xlim(0, 100)
-        ax.set_ylim(0, 100)
+        
+        self.Synaesthete.set_ax(ax)
 
         print('Opening canvas')
 
@@ -123,10 +90,8 @@ class Animator():
 
         print('Animation')
 
-        self.Synaesthete.anim_init(ax)
-
-        ani = animation.FuncAnimation(fig, self.Synaesthete.get_image,
-                                        interval=self.interval, blit=False,
+        ani = animation.FuncAnimation(fig, self.Synaesthete.master,
+                                        interval=self.interval, blit=self.blit,
                                         frames = 200)
 
         tk.mainloop()
@@ -134,51 +99,82 @@ class Animator():
         self.canvas = canvas
         self.animation = ani
 
-        return
+        return    
 
-    def plot(self):
-        return
+    def perform(self, printing = True):
+        print('Performance Started! Woohoo!')
+        self.start_stream()
+
+        # Start Animation
+        self.create_animation()
+        self.close_stream()
+        print('Performance Finished :((((')
+
 
 class Synaesthete():
-    """Where the Magic Happens
+    """Where the Magic Happens.
+
+    Ultimately the plan is that there should be a class Effects, which is SubClassed.
+
+    The Effects you want to use are defined at Instantiation 
     
     """
     def __init__(self, chunk_size, transform_type = 'fourier', effects = []):      
-        self.effects = effects
-        self.data = [1, 2, 3,4,5], [1,2,3,4,5]
+        self.data = [], []
         self.stream = None
         self.transformer = None
         self.chunk_size = chunk_size
+        
+        self.active_effect = effects[0]
+        self.effects = cycle(effects) # should take a generator functon
+        self.ax = None
+
+        # TODO create a switching class that incoporates keys etc
+        def switch_function(switch_freq = 0.01):
+            return np.random.rand() < switch_freq
+        
+        self.switcher = switch_function # This should ultimately be a string that points to a switching logic class.
+
     
-    def get_image(self, frame):
+    def master(self, frame):
+        # TODO make this elegantly handle switching, will need to write two Effects classes to switch between.
+        # TODO incorporate button handling
         self.update_data()
         x_data, y_data = self.get_data()
-        self.line.set_data(x_data, y_data)
-        self.ax.set_ylim(0, max(y_data))
-        return self.line,
-    
+        artists = self.active_effect.get_image(self.get_ax(), x_data, y_data)
+
+        if self.switcher():
+            print('Switching to next effect')
+            self.ax.clear()
+            self.active_effect.init= True
+            self.active_effect = self.next_active_effect()
+
+        return artists
+
+    def next_active_effect(self):
+        return next(self.effects)
+
     def update_data(self):
-        self.data = self.get_transformed_data()
+        self._data = self.get_transformed_data()
         
     def get_data(self):
-        return self.data
-
-    def anim_init(self, ax):
-        freqs = self.transformer.frequencies
-        ax.set_xlim(min(freqs), max(freqs))
-        line, = ax.plot([], [], lw=2, drawstyle = 'steps-post')
-        line.set_data([], [])
-        self.line = line
-        self.ax = ax
+        return self._data
     
     def set_stream(self, stream):
-        self.stream = stream
+        self._stream = stream
 
     def get_stream(self):
-        return self.stream
+        return self._stream
+
+    def set_ax(self, ax):
+        self.ax = ax
+    
+    def get_ax(self):
+        return self.ax
 
     def get_data_from_buffer(self):
-        data = np.frombuffer(self.stream.read(self.chunk_size), dtype=np.int16)
+        stream_read = self.get_stream().read(self.chunk_size, exception_on_overflow=False)
+        data = np.frombuffer(stream_read, dtype=np.int16)
         return data
     
     def set_transformer(self, transformer):
@@ -189,8 +185,7 @@ class Synaesthete():
         transform_y = self.transformer.transform(data)
         transform_x = self.transformer.frequencies
         return transform_x, transform_y
-         
-
+    
 
 
 
