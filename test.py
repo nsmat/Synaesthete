@@ -1,4 +1,5 @@
-from core import *
+from core import Performance
+from effects.spectrogram import BasicSpectrogram
 
 def run():
     spectrogram = BasicSpectrogram(x_lim = 1000)

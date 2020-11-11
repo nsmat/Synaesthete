@@ -10,26 +10,12 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from pynput import keyboard
 import numpy as np
 from itertools import cycle
+from helpers.transforms import FourierTransformer
 
 # High level goals
 # Performance - even if hefty preloading is required, should run pretty seamlessly.
 # Readability - ultimately everything should be classed.
 # Flexibility - you should be able to layer effects on as you go/apply multiple effects.
-
-class FourierTransformer():
-    """ Performs Fourier Transforms"""
-    # TODO Check the calculations Zac did.
-
-    def __init__(self, chunk_size):
-        # TODO rename variables to be more meaningful
-        self.chunk_size = chunk_size
-        self.T = 1.0 / (12*chunk_size)
-        self.frequencies = np.linspace(0.0, 1.0/(2*self.T), int(chunk_size/2))
-
-    def transform(self, data):
-        yf = np.abs(np.fft.fft(data))
-        return  2.0/self.chunk_size *np.abs(yf[:self.chunk_size//2]) # TODO Why stop halfway??
-        
 
 class Performance():
     """Handles PyAudio inputs.
@@ -198,42 +184,6 @@ class Synaesthete():
         transform_x = self.transformer.frequencies
         return transform_x, transform_y
     
-
-class BasicSpectrogram():
-    """First Example of an Effects class.
-
-    The idea here is that they should always take in a common set of arguments, 
-        and must have a method:.
-
-    get_image -> returns an iterable of artists that can be used by FuncAnimation
-
-    All other methods/attributes should be used for the animation itself.
-    """
-
-    def __init__(self, x_lim = None, y_lim = None, cmap = 'Viridis',
-                 line_args = {'drawstyle': 'steps-post', 'c': 'black'}):
-        self.x_lim = x_lim
-        self.y_lim = y_lim
-        self.init=True
-        self.line_args = line_args
-        self.cmap = cmap
-
-    def get_image(self, ax, x_data, y_data):
-
-        if self.init:
-            self.line, = ax.plot([], [], **self.line_args)
-            self.init = False
-        self.line.set_data(x_data, y_data)
-
-        
-        if self.y_lim:  
-            ylim = self.y_lim
-        else:
-            ylim = max(y_data)
-
-        ax.set_ylim(0, ylim)
-        ax.set_xlim(0, self.x_lim)
-        return self.line,
 
 
 
