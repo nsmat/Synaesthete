@@ -5,7 +5,7 @@ def run():
     spectrogram = BasicSpectrogram(x_lim=1000, y_lim = 1000, line_args = {'c': 'orange'})
     rainbow = RainbowSpectrogram(n_lines=100)
     
-    effects = [rainbow, spectrogram]
+    effects = [spectrogram, rainbow]
     P = Performance(effects, blit=True)
     P.perform()
 
